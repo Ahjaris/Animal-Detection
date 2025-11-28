@@ -54,6 +54,13 @@
             line-height: 1.6;
         }
 
+
+
+        input[type="file"] {
+            margin-top: 10px;
+            color: white;
+        }
+
         .upload-box {
             margin-top: 30px;
             background: rgba(255, 255, 255, 0.2);
@@ -63,10 +70,23 @@
             text-align: center;
         }
 
-        input[type="file"] {
-            margin-top: 10px;
-            color: white;
+        .upload-box.dragover {
+            background: rgba(255, 255, 255, 0.35);
+            border-color: #00ffcc;
         }
+
+        /* supaya area upload TIDAK ikut klik — hanya tombol Choose File */
+        .upload-box input[type="file"] {
+            margin-top: 10px;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Fokus drag & drop tetap aktif */
+        .upload-box * {
+            pointer-events: auto;
+        }
+
 
         .preview {
             margin-top: 30px;
@@ -107,10 +127,11 @@
                     Urva Javanica, Vivericula indica
                 </strong></p>
 
-            <div class="upload-box">
+            <div class="upload-box" id="dropZone">
                 <h3>Upload Gambar Hewan</h3>
                 <input type="file" id="imageUpload" accept="image/*" />
             </div>
+
 
             <div class="preview">
                 <canvas id="canvas"></canvas>
@@ -125,35 +146,55 @@
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
         const resultBox = document.getElementById("result");
+        const dropZone = document.getElementById("dropZone");
 
-        imageUpload.addEventListener("change", async function () {
-            const file = this.files[0];
-            if (!file) return;
 
+        // drag masuk
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("dragover");
+        });
+
+        // drag keluar
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("dragover");
+        });
+
+        // drop file
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+
+            const file = e.dataTransfer.files[0];
+            if (file) handleImage(file);
+        });
+
+
+        imageUpload.addEventListener("change", () => {
+            const file = imageUpload.files[0];
+            if (file) handleImage(file);
+        });
+
+        async function handleImage(file) {
             const img = new Image();
             img.src = URL.createObjectURL(file);
 
             img.onload = async () => {
-                // batas maksimal lebar tampilan gambar
                 const maxDisplayWidth = 700;
 
                 let displayWidth = img.width;
                 let displayHeight = img.height;
 
-                // jika gambar terlalu besar → skalakan
                 if (img.width > maxDisplayWidth) {
                     const scale = maxDisplayWidth / img.width;
                     displayWidth = maxDisplayWidth;
                     displayHeight = img.height * scale;
                 }
 
-                // set ukuran canvas sesuai ukuran tampilan (bukan ukuran asli)
                 canvas.width = displayWidth;
                 canvas.height = displayHeight;
 
-                // gambar disesuaikan ukuran tampilan
                 ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
-
 
                 const formData = new FormData();
                 formData.append("file", file);
@@ -182,7 +223,8 @@
                     );
                 }
             };
-        });
+        }
+
     </script>
 </body>
 
