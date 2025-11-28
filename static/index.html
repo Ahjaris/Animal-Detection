@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animal Species Classifier</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80') no-repeat center center fixed;
+            background-size: cover;
+            margin: 0;
+            padding: 0;
+        }
+
+        canvas {
+            max-width: 700px;
+            /* batasi lebar tampilan */
+            width: 100%;
+            /* responsive */
+            height: auto;
+            /* biar proporsional */
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+
+        .overlay {
+            background: rgba(0, 0, 0, 0.6);
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.4rem;
+        }
+
+        p {
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .upload-box {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px dashed #e0e0e0;
+            text-align: center;
+        }
+
+        input[type="file"] {
+            margin-top: 10px;
+            color: white;
+        }
+
+        .preview {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        img {
+            max-width: 90%;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        #result {
+            margin-top: 25px;
+            font-size: 1.3rem;
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="overlay">
+        <div class="container">
+            <h1>Animal Species Classifier</h1>
+            <p>
+                Website ini digunakan untuk mendeteksi spesies hewan menggunakan model AI.<br>
+                Model dapat mengenali kelas berikut:
+            </p>
+
+            <p><strong>
+                    Hystrix javanica, Lariscus insignis, Macaca fascicularis,<br>
+                    Martes Flavigula, Melogale orientalis, Muntiacus muntjack,<br>
+                    Panthera pardus melas, Paradoxurus hermaphroditus, Presbytis comata,<br>
+                    Prionailurus javanensis, Sus scrofa, Trachypitecus auratus,<br>
+                    Urva Javanica, Vivericula indica
+                </strong></p>
+
+            <div class="upload-box">
+                <h3>Upload Gambar Hewan</h3>
+                <input type="file" id="imageUpload" accept="image/*" />
+            </div>
+
+            <div class="preview">
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById("imageUpload");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const resultBox = document.getElementById("result");
+
+        imageUpload.addEventListener("change", async function () {
+            const file = this.files[0];
+            if (!file) return;
+
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+
+            img.onload = async () => {
+                // batas maksimal lebar tampilan gambar
+                const maxDisplayWidth = 700;
+
+                let displayWidth = img.width;
+                let displayHeight = img.height;
+
+                // jika gambar terlalu besar → skalakan
+                if (img.width > maxDisplayWidth) {
+                    const scale = maxDisplayWidth / img.width;
+                    displayWidth = maxDisplayWidth;
+                    displayHeight = img.height * scale;
+                }
+
+                // set ukuran canvas sesuai ukuran tampilan (bukan ukuran asli)
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+
+                // gambar disesuaikan ukuran tampilan
+                ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
+
+
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const response = await fetch("http://127.0.0.1:8000/predict", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                resultBox.innerHTML = `Prediksi: <strong>${data.prediction}</strong>`;
+
+                if (data.box) {
+                    const scaleX = displayWidth / img.width;
+                    const scaleY = displayHeight / img.height;
+
+                    ctx.strokeStyle = "red";
+                    ctx.lineWidth = 3;
+
+                    ctx.strokeRect(
+                        data.box.x * scaleX,
+                        data.box.y * scaleY,
+                        data.box.w * scaleX,
+                        data.box.h * scaleY
+                    );
+                }
+            };
+        });
+    </script>
+</body>
+
+</html>
